@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MuscleXFitness — Member App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0A0A0A;
+    --red:#EF1B23;
+    --red-dim:#B3141B;
+    --paper:#FFFFFF;
+    --surface:#F7F7F8;
+    --surface-2:#F1F1F3;
+    --surface-3:#E9E9EC;
+    --line: rgba(10,10,10,0.09);
+    --line-soft: rgba(10,10,10,0.06);
+    --text-dim:#8A8A8F;
+    --text-mid:#55555A;
+    --green:#1C9C6D;
+    --amber:#B5730B;
+    --safe-bottom: 10px;
+    --ease: cubic-bezier(.22,1,.36,1);
+    --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  button, input{font:inherit;}
+  button:focus-visible, .goal-chip:focus-visible, .filter-chip:focus-visible,
+  input:focus-visible, [role="button"]:focus-visible{
+    outline:2px solid var(--red); outline-offset:2px; border-radius:8px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{
+      animation-duration:.001ms !important; animation-iteration-count:1 !important;
+      transition-duration:.001ms !important; scroll-behavior:auto !important;
+    }
+  }
+  body{
+    background:#E9E9EB;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+  }
+  ::-webkit-scrollbar{display:none;}
+  *{scrollbar-width:none;}
+
+  /* ---------- App shell (real app, no hardware chrome) ---------- */
+  .device{
+    width:100%; max-width:440px; min-height:100vh; min-height:100dvh;
+    background:var(--paper);
+    position:relative;
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    box-shadow: 0 0 60px rgba(0,0,0,0.06);
+  }
+
+  .app-body{
+    flex:1; position:relative; overflow:hidden; background:var(--paper);
+    padding-top:8px;
+  }
+  .screen{
+    position:absolute; inset:0;
+    display:none; flex-direction:column;
+    overflow-y:auto; padding-bottom:110px;
+  }
+  .screen.active{display:flex;}
+  .screen.enter-right{animation: enterRight .34s var(--ease);}
+  .screen.enter-left{animation: enterLeft .34s var(--ease);}
+  .screen.enter-fade{animation: enterFade .26s ease;}
+  .screen.enter-modal,.screen.enter-modal-back{animation: enterModal .36s var(--ease);}
+  @keyframes enterRight{ from{opacity:0; transform:translateX(18px);} to{opacity:1; transform:translateX(0);} }
+  @keyframes enterLeft{ from{opacity:0; transform:translateX(-18px);} to{opacity:1; transform:translateX(0);} }
+  @keyframes enterFade{ from{opacity:0;} to{opacity:1;} }
+  @keyframes enterModal{ from{opacity:0; transform:translateY(26px) scale(.98);} to{opacity:1; transform:translateY(0) scale(1);} }
+
+  /* ---------- Typography ---------- */
+  h1,h2,h3,h4{font-family:'Poppins',sans-serif; margin:0; letter-spacing:-0.2px;}
+  .eyebrow{
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:10.5px;
+    letter-spacing:2.4px; text-transform:uppercase; color:var(--text-dim);
+  }
+  p{margin:0;}
+
+  /* ---------- Shared layout ---------- */
+  .px{padding-left:22px; padding-right:22px;}
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin:26px 0 14px;
+  }
+  .section-head h2{font-size:17px; font-weight:800;}
+  .link-btn{
+    font-family:'Poppins',sans-serif; font-size:11.5px; font-weight:700;
+    color:var(--red); letter-spacing:0.3px; background:none; border:none; cursor:pointer;
+  }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:6px 22px 4px; flex-shrink:0;
+  }
+  .topbar h1{font-size:21px; font-weight:800;}
+  .back-row{
+    display:flex; align-items:center; gap:12px; padding:6px 22px 2px; flex-shrink:0;
+  }
+  .icon-btn{
+    width:38px; height:38px; border-radius:11px; background:var(--surface-2);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; flex-shrink:0;
+    transition:transform .15s var(--ease), background .15s ease;
+  }
+  .icon-btn:active{transform:scale(.9); background:var(--surface-3);}
+  .icon-btn svg{width:17px; height:17px;}
+
+  .avatar{
+    width:42px; height:42px; border-radius:12px; flex-shrink:0;
+    background:linear-gradient(145deg,#2b2b2d,#0a0a0a); color:var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Poppins',sans-serif; font-weight:800; font-size:14px;
+    border:1px solid var(--line);
+  }
+
+  /* ---------- Card base (hairline, not shadow-kit) ---------- */
+  .card{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:16px; padding:16px;
+    transition:transform .18s var(--ease), box-shadow .18s var(--ease), border-color .18s var(--ease);
+  }
+
+  /* ---------- Hero membership card — the one bold moment ---------- */
+  .hero{
+    margin:14px 22px 0; position:relative;
+    padding:22px 22px 22px;
+    color:var(--paper);
+  }
+  .hero::before{
+    content:"";
+    position:absolute; inset:0;
+    background:
+      radial-gradient(120% 140% at 100% 0%, rgba(239,27,35,0.55) 0%, rgba(239,27,35,0) 42%),
+      linear-gradient(155deg, #1a1a1c 0%, #0a0a0a 60%);
+    border:1px solid rgba(255,255,255,0.1);
+    clip-path: polygon(0 0, 100% 0, 100% 93%, 97% 100%, 0 100%);
+    box-shadow: 0 24px 40px -24px rgba(0,0,0,0.55);
+  }
+  .hero-top{position:relative; z-index:1; display:flex; justify-content:space-between; align-items:flex-start;}
+  .hero-plan{font-family:'Poppins',sans-serif; font-weight:900; font-size:23px; letter-spacing:0.2px; color:var(--paper);}
+  .hero-badge{
+    font-family:'Poppins',sans-serif; font-weight:800; font-size:9.5px; letter-spacing:1.6px;
+    color:#FF5B60; background:rgba(239,27,35,0.22); border:1px solid rgba(239,27,35,0.5);
+    padding:4px 8px; border-radius:6px; text-transform:uppercase;
+  }
+  .hero-sub{color:rgba(255,255,255,0.62); font-size:12.5px; margin-top:4px;}
+  .hero-loc{display:flex; align-items:center; gap:4px; margin-top:6px; font-size:11.5px; font-weight:600; color:rgba(255,255,255,0.7);}
+  .hero-loc svg{flex-shrink:0;}
+
+  /* Brand ticker (home screen ad-style running banner) */
+  .brand-ticker{
+    display:flex; align-items:center; gap:0; overflow:hidden; margin:14px 22px 0; border-radius:12px;
+    height:38px; min-height:38px; flex-shrink:0;
+    background:linear-gradient(90deg,#0A0A0A,#161616);
+    border:1px solid rgba(239,27,35,0.35);
+    box-shadow:0 4px 14px rgba(0,0,0,0.18);
+  }
+  .ticker-logo{
+    flex-shrink:0; width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(145deg,#1c1c1c,#0A0A0A);
+    border-right:1px solid rgba(239,27,35,0.35);
+    font-family:'Poppins',sans-serif; font-weight:900; font-size:13px; letter-spacing:-0.5px;
+  }
+  .ticker-logo .m{color:#fff;}
+  .ticker-logo .x{color:#EF1B23;}
+  .ticker-mask{flex:1; overflow:hidden; white-space:nowrap; height:38px; line-height:38px;}
+  .ticker-track{display:inline-block; white-space:nowrap; animation:ticker-scroll 16s linear infinite;}
+  .ticker-track span{
+    display:inline-block; padding:0 18px; vertical-align:middle;
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:11.5px; line-height:38px;
+    letter-spacing:0.5px; color:#fff; white-space:nowrap;
+  }
+  .ticker-track span::after{content:"•"; margin-left:18px; color:#EF1B23;}
+  .ticker-track b{font-weight:900;}
+  .ticker-track .brand-x{color:#EF1B23;}
+  @keyframes ticker-scroll{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
+
+  .hero-bottom{position:relative; z-index:1; display:flex; align-items:center; gap:16px; margin-top:20px;}
+  .ring-wrap{position:relative; width:58px; height:58px; flex-shrink:0;}
+  .ring-wrap svg{transform:rotate(-90deg);}
+  .ring-label{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:'Poppins',sans-serif; font-weight:800; font-size:12.5px; color:var(--paper);
+    opacity:0; animation: fadeInLabel .3s ease .9s both;
+  }
+  .ring-progress{
+    animation: ringDraw 1.1s var(--ease) .2s both;
+  }
+  @keyframes ringDraw{ from{stroke-dashoffset:150.8;} to{stroke-dashoffset:34;} }
+  @keyframes fadeInLabel{ from{opacity:0;} to{opacity:1;} }
+  .hero-days{flex:1;}
+  .hero-days .num{font-family:'Poppins',sans-serif; font-weight:800; font-size:14px; color:var(--paper);}
+  .hero-days .lbl{color:rgba(255,255,255,0.55); font-size:11px; margin-top:1px;}
+  .btn-manage{
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:11.5px;
+    background:var(--paper); color:var(--ink); border:none; border-radius:10px;
+    padding:10px 14px; cursor:pointer; letter-spacing:0.2px; flex-shrink:0; white-space:nowrap;
+  }
+
+  /* ---------- Stat chips ---------- */
+  .chip-row{display:flex; gap:10px; padding:16px 22px 0; overflow-x:auto; flex-shrink:0;}
+  .stat-chip{
+    flex:1; min-width:104px; background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:12px 13px;
+    animation: chipIn .38s var(--ease) both;
+  }
+  .stat-chip:nth-child(2){animation-delay:.06s;}
+  .stat-chip:nth-child(3){animation-delay:.12s;}
+  @keyframes chipIn{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+  .stat-chip .v{font-family:'Poppins',sans-serif; font-weight:800; font-size:17px;}
+  .stat-chip .v span{color:var(--red); font-size:12px; font-weight:700;}
+  .stat-chip .l{font-size:10.5px; color:var(--text-dim); margin-top:2px; letter-spacing:0.2px;}
+
+  /* ---------- Offers carousel ---------- */
+  .offer-scroll{
+    display:flex; gap:12px; padding:0 22px; overflow-x:auto; margin-top:2px; flex-shrink:0;
+  }
+  .offer-card{
+    min-width:230px; border-radius:14px; padding:15px 16px 15px 15px; flex-shrink:0;
+    background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--red);
+    position:relative; overflow:hidden;
+    transition:transform .15s var(--ease), box-shadow .15s var(--ease);
+  }
+  .offer-card:active{transform:scale(.97);}
+  .offer-card.o2{border-left-color:var(--ink);}
+  .offer-card.o3{border-left-color:var(--amber);}
+  .offer-tag{
+    font-family:'Poppins',sans-serif; font-weight:800; font-size:9px; letter-spacing:1.4px;
+    color:var(--red); text-transform:uppercase;
+  }
+  .offer-card h4{font-size:14.5px; margin-top:6px; line-height:1.3;}
+  .offer-card p{font-size:11px; color:var(--text-dim); margin-top:5px; line-height:1.4;}
+
+  /* ---------- Quick actions ---------- */
+  .quick-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+    padding:0 22px; margin-top:18px;
+  }
+  .quick-item{display:flex; flex-direction:column; align-items:center; gap:7px; cursor:pointer;}
+  .quick-ico{
+    width:52px; height:52px; border-radius:15px; background:var(--surface);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+    transition:transform .15s var(--ease), background .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .quick-item:active .quick-ico{transform:scale(.9); background:var(--surface-2); box-shadow:0 6px 14px -8px rgba(239,27,35,0.35);}
+  .quick-ico svg{width:20px; height:20px;}
+  .quick-item span{font-size:10px; color:var(--text-mid); text-align:center; font-weight:600;}
+
+  /* ---------- List rows ---------- */
+  .row{
+    display:flex; align-items:center; gap:13px; padding:13px 22px;
+    border-bottom:1px solid var(--line-soft); cursor:pointer;
+    transition:background .15s ease;
+  }
+  .row:active{background:var(--surface-2);}
+  .row:last-child{border-bottom:none;}
+  .row .ico-box{
+    width:40px; height:40px; border-radius:11px; background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    border:1px solid var(--line);
+  }
+  .row .ico-box svg{width:17px; height:17px;}
+  .row .body{flex:1; min-width:0;}
+  .row .title{font-size:13.5px; font-weight:600;}
+  .row .sub{font-size:11.5px; color:var(--text-dim); margin-top:2px;}
+  .row .chev{color:var(--text-dim); flex-shrink:0;}
+
+  /* ---------- Bottom nav ---------- */
+  .navbar{
+    position:absolute; left:0; right:0; bottom:0;
+    display:flex; justify-content:space-around; align-items:center;
+    padding:10px 8px calc(var(--safe-bottom) + 10px);
+    background:rgba(255,255,255,0.92); backdrop-filter:blur(14px);
+    border-top:1px solid var(--line); z-index:40;
+  }
+  .navbtn{
+    background:none; border:none; display:flex; flex-direction:column; align-items:center;
+    gap:4px; color:var(--text-dim); cursor:pointer; font-family:'Poppins',sans-serif;
+    font-size:9.5px; font-weight:700; letter-spacing:0.3px; padding:4px 10px;
+    position:relative; transition:transform .15s var(--ease), color .18s ease;
+  }
+  .navbtn svg{width:20px; height:20px; transition:color .18s ease, transform .18s var(--ease-spring);}
+  .navbtn.active{color:var(--ink);}
+  .navbtn.active svg{color:var(--red); transform:translateY(-1px);}
+  .navbtn:active{transform:scale(.92);}
+  .navbtn::before{
+    content:""; position:absolute; top:-2px; width:4px; height:4px; border-radius:50%;
+    background:var(--red); opacity:0; transform:scale(.4); transition:opacity .18s ease, transform .18s var(--ease-spring);
+  }
+  .navbtn.active::before{opacity:1; transform:scale(1);}
+
+  /* ---------- Buttons ---------- */
+  .btn-primary{
+    width:100%; background:var(--red); color:var(--paper); border:none;
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:13.5px;
+    border-radius:12px; padding:14px; cursor:pointer; letter-spacing:0.2px;
+    box-shadow:0 14px 24px -12px rgba(239,27,35,0.55);
+    transition:transform .15s var(--ease), box-shadow .15s var(--ease), background .15s ease;
+  }
+  .btn-primary:active{transform:scale(.97); box-shadow:0 8px 16px -10px rgba(239,27,35,0.5);}
+  .btn-ghost{
+    width:100%; background:transparent; color:var(--ink); border:1px solid var(--line);
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:13px;
+    border-radius:12px; padding:13px; cursor:pointer;
+    transition:transform .15s var(--ease), background .15s ease, border-color .15s ease;
+  }
+  .btn-ghost:active{transform:scale(.97); background:var(--surface-2);}
+  .btn-small{
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:11px;
+    border-radius:9px; padding:8px 14px; border:1px solid var(--line);
+    background:var(--surface-3); color:var(--ink); cursor:pointer;
+    transition:transform .15s var(--ease), background .2s ease, border-color .2s ease, color .2s ease;
+  }
+  .btn-small:active{transform:scale(.94);}
+  .btn-small.booked{
+    background:rgba(56,211,159,0.12); border-color:rgba(56,211,159,0.4); color:var(--green);
+    animation: bookedPop .32s var(--ease-spring);
+  }
+  @keyframes bookedPop{ from{transform:scale(.9);} to{transform:scale(1);} }
+
+  /* ---------- Toggle switch ---------- */
+  .switch{position:relative; width:44px; height:26px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{
+    position:absolute; inset:0; background:var(--surface-3); border:1px solid var(--line);
+    border-radius:20px; cursor:pointer; transition:.2s;
+  }
+  .slider:before{
+    content:""; position:absolute; width:18px; height:18px; left:3px; top:3px;
+    background:var(--text-dim); border-radius:50%; transition:.2s;
+  }
+  .switch input:checked + .slider{background:rgba(239,27,35,0.35); border-color:var(--red);}
+  .switch input:checked + .slider:before{transform:translateX(18px); background:var(--red);}
+
+  /* ---------- Divider with brand tick ---------- */
+  .tick-divider{display:flex; align-items:center; gap:8px; margin:22px 22px 0;}
+  .tick-divider .bar{width:24px; height:2px; background:var(--red);}
+  .tick-divider span{
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:9.5px;
+    letter-spacing:2.2px; color:var(--text-dim); text-transform:uppercase;
+  }
+
+  /* ---------- Plans (workout) screen ---------- */
+  .bmi-card{margin:14px 22px 0;}
+  .bmi-card .eyebrow{margin-bottom:10px;}
+  .bmi-inputs{display:flex; gap:10px;}
+  .field{flex:1;}
+  .field label{font-size:10.5px; color:var(--text-dim); font-weight:600;}
+  .field input{
+    width:100%; margin-top:6px; background:var(--surface-2); border:1px solid var(--line);
+    border-radius:10px; padding:11px 12px; color:var(--ink); font-size:14px;
+    font-family:'Poppins',sans-serif; font-weight:700;
+  }
+  .field input:focus{outline:none; border-color:var(--red);}
+  .bmi-result{
+    margin-top:14px; display:flex; align-items:center; justify-content:space-between;
+    background:var(--surface-2); border-radius:12px; padding:13px 15px; border:1px solid var(--line);
+  }
+  .bmi-result.pop{animation: bmiPop .38s var(--ease-spring);}
+  @keyframes bmiPop{ from{opacity:0; transform:translateY(6px) scale(.97);} to{opacity:1; transform:translateY(0) scale(1);} }
+  .bmi-result .num{font-family:'Poppins',sans-serif; font-weight:900; font-size:26px;}
+  .bmi-result .cat{
+    font-family:'Poppins',sans-serif; font-weight:800; font-size:11px; letter-spacing:0.5px;
+    padding:5px 10px; border-radius:8px;
+  }
+  .cat-under{background:rgba(245,166,35,0.15); color:var(--amber);}
+  .cat-normal{background:rgba(56,211,159,0.15); color:var(--green);}
+  .cat-over{background:rgba(245,166,35,0.15); color:var(--amber);}
+  .cat-obese{background:rgba(239,27,35,0.15); color:var(--red);}
+  .bmi-note{font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.5;}
+
+  .goal-row{display:flex; gap:9px; padding:0 22px; margin-top:16px; overflow-x:auto; flex-shrink:0;}
+  .goal-chip{
+    flex-shrink:0; padding:10px 15px; border-radius:11px; border:1px solid var(--line);
+    background:var(--surface); font-family:'Poppins',sans-serif; font-weight:700; font-size:12px;
+    color:var(--text-mid); cursor:pointer; display:flex; align-items:center; gap:7px;
+    transition:background .2s ease, border-color .2s ease, color .2s ease, transform .15s var(--ease-spring), box-shadow .2s ease;
+  }
+  .goal-chip.active{
+    background:var(--red); border-color:var(--red); color:var(--paper); transform:scale(1.04);
+    box-shadow:0 10px 18px -10px rgba(239,27,35,0.55);
+  }
+  .goal-chip:active{transform:scale(.95);}
+
+  .plan-banner{
+    margin:16px 22px 0; border-radius:14px; padding:14px 16px;
+    background:linear-gradient(120deg, rgba(239,27,35,0.18), rgba(239,27,35,0.02));
+    border:1px solid rgba(239,27,35,0.3); display:flex; justify-content:space-between; align-items:center;
+  }
+  .plan-banner .k{font-size:10.5px; color:var(--text-dim); font-weight:600;}
+  .plan-banner .v{font-family:'Poppins',sans-serif; font-weight:800; font-size:15px; margin-top:2px;}
+
+  .day-card{
+    margin:0 22px 12px; padding:14px 16px; border-radius:14px;
+    background:var(--surface); border:1px solid var(--line);
+    animation: dayIn .4s var(--ease) both;
+  }
+  @keyframes dayIn{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+  .day-card .dhead{display:flex; justify-content:space-between; align-items:center;}
+  .day-card .dname{font-family:'Poppins',sans-serif; font-weight:800; font-size:13.5px;}
+  .day-card .dfocus{font-size:10.5px; color:var(--red); font-weight:700; margin-top:2px;}
+  .day-card .ddur{font-size:10.5px; color:var(--text-dim);}
+  .ex-list{margin-top:10px; display:flex; flex-direction:column; gap:7px;}
+  .ex-item{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-mid);}
+  .ex-item .dot{width:4px; height:4px; border-radius:50%; background:var(--red); flex-shrink:0;}
+
+  /* ---------- Classes ---------- */
+  .filter-row{display:flex; gap:8px; padding:14px 22px 0; overflow-x:auto; flex-shrink:0;}
+  .filter-chip{
+    flex-shrink:0; padding:8px 14px; border-radius:20px; border:1px solid var(--line);
+    background:var(--surface); font-size:12px; font-weight:600; color:var(--text-mid); cursor:pointer;
+    transition:background .2s ease, color .2s ease, border-color .2s ease, transform .15s var(--ease-spring);
+  }
+  .filter-chip.active{background:var(--ink); color:var(--paper); border-color:var(--ink); transform:scale(1.03);}
+  .filter-chip:active{transform:scale(.94);}
+  .class-card{
+    margin:12px 22px 0; padding:14px 15px; border-radius:14px; background:var(--surface);
+    border:1px solid var(--line); display:flex; gap:13px; align-items:center;
+    transition:transform .15s var(--ease), border-color .15s ease, box-shadow .15s ease;
+  }
+  .class-time{
+    width:52px; text-align:center; flex-shrink:0; border-right:1px solid var(--line); padding-right:12px;
+  }
+  .class-time .t1{font-family:'Poppins',sans-serif; font-weight:800; font-size:14px;}
+  .class-time .t2{font-size:9.5px; color:var(--text-dim); margin-top:2px;}
+  .class-info{flex:1; min-width:0;}
+  .class-info h4{font-size:13.5px;}
+  .class-info .meta{font-size:11px; color:var(--text-dim); margin-top:3px;}
+  .seats{font-size:10px; color:var(--amber); margin-top:4px; font-weight:600;}
+
+  /* ---------- Wallet ---------- */
+  .renew-card{margin:14px 22px 0;}
+  .renew-top{display:flex; justify-content:space-between; align-items:center;}
+  .renew-top h3{font-size:14px; font-weight:800;}
+  .renew-sub{font-size:11px; color:var(--text-dim); margin-top:4px; line-height:1.5;}
+  .renew-meta{display:flex; justify-content:space-between; margin-top:14px; padding-top:14px; border-top:1px solid var(--line-soft);}
+  .renew-meta .k{font-size:10px; color:var(--text-dim);}
+  .renew-meta .v{font-family:'Poppins',sans-serif; font-weight:800; font-size:14px; margin-top:3px;}
+
+  .pay-method{
+    margin:12px 22px 0; padding:13px 15px; border-radius:13px; background:var(--surface);
+    border:1px solid var(--line); display:flex; align-items:center; gap:12px;
+  }
+  .card-icon{
+    width:38px; height:26px; border-radius:6px; background:linear-gradient(135deg,#2b2b2d,#050505);
+    border:1px solid var(--line); flex-shrink:0;
+  }
+  .txn{
+    display:flex; align-items:center; justify-content:space-between; padding:12px 22px;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .txn.pop-in{animation: bmiPop .4s var(--ease-spring);}
+  .txn .l .t{font-size:12.5px; font-weight:600;}
+  .txn .l .d{font-size:10.5px; color:var(--text-dim); margin-top:2px;}
+  .txn .r{text-align:right;}
+  .txn .r .amt{font-family:'Poppins',sans-serif; font-weight:800; font-size:13px;}
+  .status-pill{font-size:9px; font-weight:700; letter-spacing:0.4px; padding:2px 7px; border-radius:6px; margin-top:3px; display:inline-block;}
+  .status-paid{background:rgba(56,211,159,0.15); color:var(--green);}
+  .status-failed{background:rgba(239,27,35,0.15); color:var(--red);}
+
+  /* ---------- Profile ---------- */
+  .profile-head{display:flex; align-items:center; gap:14px; padding:16px 22px 0;}
+  .profile-head .av-lg{
+    width:64px; height:64px; border-radius:18px;
+    background:linear-gradient(145deg,#2b2b2d,#0a0a0a); border:1px solid var(--line); color:var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Poppins',sans-serif; font-weight:900; font-size:20px;
+  }
+  .profile-head h3{font-size:16.5px;}
+  .profile-head .sub{font-size:11.5px; color:var(--text-dim); margin-top:3px;}
+  .id-pill{
+    margin-top:6px; display:inline-block; font-size:10px; font-weight:700; color:var(--red);
+    background:rgba(239,27,35,0.12); padding:3px 8px; border-radius:6px; letter-spacing:0.3px;
+  }
+
+  /* ---------- Referral ---------- */
+  .code-box{
+    margin:16px 22px 0; padding:20px; border-radius:16px; text-align:center;
+    background:linear-gradient(150deg,#1a1a1c,#0a0a0a); border:1px solid rgba(239,27,35,0.35);
+    color:var(--paper);
+  }
+  .code-box .eyebrow{color:#FF5B60;}
+  .code-box .code{
+    font-family:'Poppins',sans-serif; font-weight:900; font-size:28px; letter-spacing:4px;
+    margin-top:8px; color:var(--paper);
+  }
+  .code-box .bmi-note{color:rgba(255,255,255,0.6);}
+  .share-row{display:flex; gap:10px; margin-top:16px;}
+  .share-btn{
+    flex:1; background:var(--surface-2); border:1px solid var(--line); border-radius:11px;
+    padding:10px; display:flex; align-items:center; justify-content:center; gap:6px;
+    font-size:11.5px; font-weight:700; color:var(--ink); cursor:pointer; font-family:'Poppins',sans-serif;
+    transition:transform .15s var(--ease), background .15s ease;
+  }
+  .share-btn:active{transform:scale(.95); background:var(--surface-3);}
+  .whatsapp-btn{
+    background:#25D366; border-color:#25D366; color:#fff;
+    box-shadow:0 10px 18px -10px rgba(37,211,102,0.55);
+  }
+  .whatsapp-btn:active{background:#1FBD5A; transform:scale(.95);}
+  .ref-stats{display:flex; gap:10px; padding:16px 22px 0;}
+  .ref-stat{flex:1; text-align:center; background:var(--surface); border:1px solid var(--line); border-radius:13px; padding:12px 8px;}
+  .ref-stat .n{font-family:'Poppins',sans-serif; font-weight:900; font-size:19px;}
+  .ref-stat .l{font-size:9.5px; color:var(--text-dim); margin-top:3px;}
+  .tier-row{
+    margin:12px 22px 0; padding:13px 15px; border-radius:13px; background:var(--surface);
+    border:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;
+  }
+  .tier-row .t{font-size:12.5px; font-weight:600;}
+  .tier-row .r{font-size:11px; color:var(--red); font-weight:700;}
+
+  .toast{
+    position:absolute; left:50%; bottom:120px; transform:translateX(-50%) translateY(14px) scale(.94);
+    background:var(--ink); color:var(--paper); font-family:'Poppins',sans-serif; font-weight:700;
+    font-size:12px; padding:11px 18px; border-radius:11px; opacity:0; pointer-events:none;
+    transition:opacity .3s var(--ease-spring), transform .3s var(--ease-spring);
+    box-shadow:0 16px 30px -12px rgba(0,0,0,0.4);
+    z-index:80; white-space:nowrap;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0) scale(1);}
+
+  @media (max-width:460px){
+    .device{ box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="device" id="device">
+    <div class="app-body">
+
+      <!-- ============ HOME ============ -->
+      <div class="screen active" id="screen-home">
+        <div class="topbar">
+          <div>
+            <div class="eyebrow">Welcome back</div>
+            <h1>Arjun Mehta</h1>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div class="icon-btn" onclick="showScreen('wallet')" aria-label="Open wallet">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            </div>
+            <div class="avatar">AM</div>
+          </div>
+        </div>
+
+        <!-- Brand ticker -->
+        <div class="brand-ticker">
+          <div class="ticker-logo"><span class="m">M</span><span class="x">X</span></div>
+          <div class="ticker-mask">
+            <div class="ticker-track">
+              <span><b>Muscle<span class="brand-x">X</span>Fitness</b>™ &nbsp;—&nbsp; FITNESS FOR A BRIGHTER YOU</span>
+              <span>TRAIN HARDER · LIVE HEALTHIER · STAY BALANCED · BE STRONGER</span>
+              <span><b>Muscle<span class="brand-x">X</span>Fitness</b>™ &nbsp;—&nbsp; FITNESS FOR A BRIGHTER YOU</span>
+              <span>TRAIN HARDER · LIVE HEALTHIER · STAY BALANCED · BE STRONGER</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero membership card -->
+        <div class="hero">
+          <div class="hero-top">
+            <div>
+              <div class="hero-plan">ELITE BLACK</div>
+              <div class="hero-sub">Valid till 24 Dec 2026</div>
+              <div class="hero-loc">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#EF1B23"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+                A10, Suncity
+              </div>
+            </div>
+            <div class="hero-badge">Active</div>
+          </div>
+          <div class="hero-bottom">
+            <div class="ring-wrap">
+              <svg width="58" height="58" viewBox="0 0 58 58">
+                <circle cx="29" cy="29" r="24" stroke="rgba(255,255,255,0.12)" stroke-width="5" fill="none"/>
+                <circle class="ring-progress" cx="29" cy="29" r="24" stroke="#EF1B23" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="34"/>
+              </svg>
+              <div class="ring-label">78%</div>
+            </div>
+            <div class="hero-days">
+              <div class="num">112 days left</div>
+              <div class="lbl">Auto-renewal is ON</div>
+            </div>
+            <button class="btn-manage" onclick="showScreen('membership')">Manage</button>
+          </div>
+        </div>
+
+        <!-- Quick stats -->
+        <div class="chip-row">
+          <div class="stat-chip">
+            <div class="v">22.4 <span>Normal</span></div>
+            <div class="l">Current BMI</div>
+          </div>
+          <div class="stat-chip">
+            <div class="v">18 <span>days</span></div>
+            <div class="l">Active streak</div>
+          </div>
+          <div class="stat-chip">
+            <div class="v">4 <span>/wk</span></div>
+            <div class="l">Classes booked</div>
+          </div>
+        </div>
+
+        <div class="section-head px">
+          <h2>Offers for you</h2>
+        </div>
+        <div class="offer-scroll">
+          <div class="offer-card o1">
+            <div class="offer-tag">Referral</div>
+            <h4>Refer a friend, earn a free month</h4>
+            <p>Both of you get rewarded the moment they join.</p>
+          </div>
+          <div class="offer-card o2">
+            <div class="offer-tag">Upgrade</div>
+            <h4>Move to Elite Black at 20% off</h4>
+            <p>Limited seats this month at your gym.</p>
+          </div>
+          <div class="offer-card o3">
+            <div class="offer-tag">Renewal</div>
+            <h4>Renew early, lock this year's price</h4>
+            <p>Save before the new pricing cycle begins.</p>
+          </div>
+        </div>
+
+        <div class="section-head px">
+          <h2>Quick actions</h2>
+        </div>
+        <div class="quick-grid">
+          <div class="quick-item" onclick="showScreen('plans')">
+            <div class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#EF1B23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 4l3 3M20 20l-3-3M2 8l2-2M22 16l-2 2M8 2 6 4M16 22l2-2M9 9l6 6"/></svg></div>
+            <span>Workout Plans</span>
+          </div>
+          <div class="quick-item" onclick="showScreen('classes')">
+            <div class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#EF1B23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+            <span>Book a Class</span>
+          </div>
+          <div class="quick-item" onclick="showScreen('plans')">
+            <div class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#EF1B23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V10M4 10a2 2 0 1 1 4 0v11M4 10 2 8M14 21V6M14 6a2 2 0 1 1 4 0v15M14 6l-2-2M20 21v-4M20 17a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/></svg></div>
+            <span>Track BMI</span>
+          </div>
+          <div class="quick-item" onclick="showScreen('referral')">
+            <div class="quick-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#EF1B23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6.2 6.5-6.2s6.5 2.6 6.5 6.2"/><path d="M17 3.6a3.2 3.2 0 0 1 0 6.2M21.5 20c0-3-2-5.3-4.8-6"/></svg></div>
+            <span>Referral</span>
+          </div>
+        </div>
+
+        <div class="tick-divider"><div class="bar"></div><span>Next up</span></div>
+        <div class="class-card" style="margin-top:12px;">
+          <div class="class-time"><div class="t1">6:30</div><div class="t2">AM</div></div>
+          <div class="class-info">
+            <h4>Strength &amp; Conditioning</h4>
+            <div class="meta">with Coach Rehan · Studio 2</div>
+          </div>
+          <button class="btn-small booked">Booked</button>
+        </div>
+      </div>
+
+      <!-- ============ PLANS (Workout + BMI) ============ -->
+      <div class="screen" id="screen-plans">
+        <div class="topbar"><h1>Workout Plans</h1></div>
+
+        <div class="bmi-card card px" style="margin:14px 22px 0; padding:16px;">
+          <div class="eyebrow">BMI Calculator</div>
+          <div class="bmi-inputs" style="margin-top:2px;">
+            <div class="field">
+              <label>Height (cm)</label>
+              <input type="number" id="in-height" placeholder="172" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label>Weight (kg)</label>
+              <input type="number" id="in-weight" placeholder="78" inputmode="numeric">
+            </div>
+          </div>
+          <button class="btn-primary" style="margin-top:12px;" onclick="calcBMI()">Calculate BMI</button>
+
+          <div class="bmi-result" id="bmi-result" style="display:none;">
+            <div>
+              <div class="num" id="bmi-num">--</div>
+              <div class="bmi-note" id="bmi-note" style="margin-top:2px;">—</div>
+            </div>
+            <div class="cat" id="bmi-cat">—</div>
+          </div>
+        </div>
+
+        <div class="section-head px" style="margin-bottom:2px;">
+          <h2>Choose your goal</h2>
+        </div>
+        <div class="goal-row" id="goal-row">
+          <div class="goal-chip active" data-goal="loss" onclick="selectGoal('loss')">Weight Loss</div>
+          <div class="goal-chip" data-goal="gain" onclick="selectGoal('gain')">Weight Gain</div>
+          <div class="goal-chip" data-goal="muscle" onclick="selectGoal('muscle')">Muscle Build</div>
+          <div class="goal-chip" data-goal="maintain" onclick="selectGoal('maintain')">Maintain / Tone</div>
+        </div>
+
+        <div class="plan-banner" id="plan-banner">
+          <div><div class="k">Daily calorie target</div><div class="v" id="plan-cal">1,800 kcal</div></div>
+          <div style="text-align:right;"><div class="k">Focus</div><div class="v" id="plan-focus">Fat loss + cardio</div></div>
+        </div>
+
+        <div id="plan-days" style="margin-top:16px;"></div>
+      </div>
+
+      <!-- ============ CLASSES ============ -->
+      <div class="screen" id="screen-classes">
+        <div class="topbar"><h1>Classes</h1></div>
+        <div class="filter-row">
+          <div class="filter-chip active" onclick="filterClasses(this,'all')">All</div>
+          <div class="filter-chip" onclick="filterClasses(this,'yoga')">Yoga</div>
+          <div class="filter-chip" onclick="filterClasses(this,'hiit')">HIIT</div>
+          <div class="filter-chip" onclick="filterClasses(this,'strength')">Strength</div>
+          <div class="filter-chip" onclick="filterClasses(this,'boxing')">Boxing</div>
+        </div>
+
+        <div id="class-list" style="margin-top:4px;">
+          <div class="class-card" data-cat="strength">
+            <div class="class-time"><div class="t1">6:30</div><div class="t2">AM</div></div>
+            <div class="class-info">
+              <h4>Strength &amp; Conditioning</h4>
+              <div class="meta">Coach Rehan · Studio 2 · 60 min</div>
+              <div class="seats">4 spots left</div>
+            </div>
+            <button class="btn-small booked">Booked</button>
+          </div>
+          <div class="class-card" data-cat="yoga">
+            <div class="class-time"><div class="t1">8:00</div><div class="t2">AM</div></div>
+            <div class="class-info">
+              <h4>Power Yoga Flow</h4>
+              <div class="meta">Coach Meera · Studio 1 · 45 min</div>
+              <div class="seats">9 spots left</div>
+            </div>
+            <button class="btn-small" onclick="bookClass(this)">Book</button>
+          </div>
+          <div class="class-card" data-cat="hiit">
+            <div class="class-time"><div class="t1">5:30</div><div class="t2">PM</div></div>
+            <div class="class-info">
+              <h4>HIIT Burn</h4>
+              <div class="meta">Coach Zaid · Studio 3 · 40 min</div>
+              <div class="seats">2 spots left</div>
+            </div>
+            <button class="btn-small" onclick="bookClass(this)">Book</button>
+          </div>
+          <div class="class-card" data-cat="boxing">
+            <div class="class-time"><div class="t1">7:00</div><div class="t2">PM</div></div>
+            <div class="class-info">
+              <h4>Boxing Fundamentals</h4>
+              <div class="meta">Coach Vikram · Ring 1 · 50 min</div>
+              <div class="seats">6 spots left</div>
+            </div>
+            <button class="btn-small" onclick="bookClass(this)">Book</button>
+          </div>
+          <div class="class-card" data-cat="yoga">
+            <div class="class-time"><div class="t1">6:00</div><div class="t2">PM</div></div>
+            <div class="class-info">
+              <h4>Restorative Yoga</h4>
+              <div class="meta">Coach Meera · Studio 1 · 45 min</div>
+              <div class="seats">11 spots left</div>
+            </div>
+            <button class="btn-small" onclick="bookClass(this)">Book</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ WALLET (Payments / Renewal / History) ============ -->
+      <div class="screen" id="screen-wallet">
+        <div class="topbar"><h1>Wallet</h1></div>
+
+        <div class="card renew-card">
+          <div class="renew-top">
+            <h3>Automated renewal</h3>
+            <label class="switch">
+              <input type="checkbox" checked id="renew-toggle" onchange="toggleRenew()">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="renew-sub" id="renew-sub">Your Elite Black plan renews automatically so you never lose access.</div>
+          <div class="renew-meta">
+            <div><div class="k">Next billing</div><div class="v">24 Dec 2026</div></div>
+            <div style="text-align:right;"><div class="k">Amount</div><div class="v">₹4,999</div></div>
+          </div>
+        </div>
+
+        <div class="section-head px"><h2>Payment methods</h2><button class="link-btn" onclick="addPaymentMethod()">Add new</button></div>
+        <div class="pay-method">
+          <div class="card-icon"></div>
+          <div style="flex:1;">
+            <div style="font-size:13px; font-weight:600;">HDFC Credit Card •••• 4417</div>
+            <div style="font-size:10.5px; color:var(--text-dim); margin-top:2px;">Primary payment method</div>
+          </div>
+          <div class="eyebrow" style="color:var(--green);">Default</div>
+        </div>
+        <div class="pay-method">
+          <div class="card-icon"></div>
+          <div style="flex:1;">
+            <div style="font-size:13px; font-weight:600;">UPI · arjun@okhdfc</div>
+            <div style="font-size:10.5px; color:var(--text-dim); margin-top:2px;">Backup payment method</div>
+          </div>
+        </div>
+
+        <div class="px" style="margin-top:6px;">
+          <button class="btn-primary" id="pay-btn" onclick="payNow()">Pay ₹4,999 now</button>
+        </div>
+
+        <div class="section-head px"><h2>Transaction history</h2></div>
+        <div id="txn-list">
+          <div class="txn">
+            <div class="l"><div class="t">Elite Black — Renewal</div><div class="d">24 Nov 2025</div></div>
+            <div class="r"><div class="amt">₹4,999</div><div class="status-pill status-paid">PAID</div></div>
+          </div>
+          <div class="txn">
+            <div class="l"><div class="t">Personal training add-on</div><div class="d">02 Nov 2025</div></div>
+            <div class="r"><div class="amt">₹1,200</div><div class="status-pill status-paid">PAID</div></div>
+          </div>
+          <div class="txn">
+            <div class="l"><div class="t">Pro — Renewal attempt</div><div class="d">24 Oct 2025</div></div>
+            <div class="r"><div class="amt">₹2,999</div><div class="status-pill status-failed">FAILED</div></div>
+          </div>
+          <div class="txn">
+            <div class="l"><div class="t">Elite Black — Upgrade</div><div class="d">24 Sep 2025</div></div>
+            <div class="r"><div class="amt">₹4,999</div><div class="status-pill status-paid">PAID</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ PROFILE ============ -->
+      <div class="screen" id="screen-profile">
+        <div class="topbar"><h1>Profile</h1></div>
+        <div class="profile-head">
+          <div class="av-lg">AM</div>
+          <div>
+            <h3>Arjun Mehta</h3>
+            <div class="sub">+91 98200 xxxxx · arjun.m@email.com</div>
+            <div class="id-pill">MEMBER ID · MX10482</div>
+          </div>
+        </div>
+
+        <div class="tick-divider"><div class="bar"></div><span>Account</span></div>
+        <div class="card" style="margin:12px 22px 0; padding:0;">
+          <div class="row" onclick="showScreen('membership')">
+            <div class="ico-box"><svg viewBox="0 0 24 24" fill="none" stroke="#EF1B23" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
+            <div class="body"><div class="title">Membership</div><div class="sub">Elite Black · Active</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="row" onclick="showScreen('referral')">
+            <div class="ico-box"><svg viewBox="0 0 24 24" fill="none" stroke="#EF1B23" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.6 2.9-6.2 6.5-6.2s6.5 2.6 6.5 6.2"/></svg></div>
+            <div class="body"><div class="title">Referral program</div><div class="sub">3 friends invited</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="row" onclick="showScreen('wallet')">
+            <div class="ico-box"><svg viewBox="0 0 24 24" fill="none" stroke="#EF1B23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2.5"/><path d="M2.5 10h19"/><path d="M15.5 14.5h3"/></svg></div>
+            <div class="body"><div class="title">Payments &amp; billing</div><div class="sub">Auto-renewal on</div></div>
+            <div class="chev">›</div>
+          </div>
+        </div>
+
+        <div class="tick-divider"><div class="bar"></div><span>Preferences</span></div>
+        <div class="card" style="margin:12px 22px 0; padding:0;">
+          <div class="row" onclick="showToast('Notification settings opened')">
+            <div class="ico-box"><svg viewBox="0 0 24 24" fill="none" stroke="#EF1B23" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
+            <div class="body"><div class="title">Notifications</div><div class="sub">Class reminders, offers</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="row" onclick="showToast('Connecting you to support…')">
+            <div class="ico-box"><svg viewBox="0 0 24 24" fill="none" stroke="#EF1B23" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></div>
+            <div class="body"><div class="title">Help &amp; support</div><div class="sub">Chat with the gym team</div></div>
+            <div class="chev">›</div>
+          </div>
+          <div class="row" onclick="logOut()">
+            <div class="ico-box"><svg viewBox="0 0 24 24" fill="none" stroke="#EF1B23" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></div>
+            <div class="body"><div class="title">Log out</div></div>
+            <div class="chev">›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ MEMBERSHIP (sub-screen) ============ -->
+      <div class="screen" id="screen-membership">
+        <div class="back-row">
+          <div class="icon-btn" onclick="showScreen('home')" aria-label="Go back"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+          <h1 style="font-size:19px;">Membership</h1>
+        </div>
+
+        <div class="hero" style="margin-top:14px;">
+          <div class="hero-top">
+            <div>
+              <div class="hero-plan">ELITE BLACK</div>
+              <div class="hero-sub">₹4,999 / month · started 24 Sep 2025</div>
+              <div class="hero-loc">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#EF1B23"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+                A10, Suncity
+              </div>
+            </div>
+            <div class="hero-badge">Active</div>
+          </div>
+          <div class="hero-bottom">
+            <div class="ring-wrap">
+              <svg width="58" height="58" viewBox="0 0 58 58">
+                <circle cx="29" cy="29" r="24" stroke="rgba(255,255,255,0.12)" stroke-width="5" fill="none"/>
+                <circle class="ring-progress" cx="29" cy="29" r="24" stroke="#EF1B23" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="34"/>
+              </svg>
+              <div class="ring-label">78%</div>
+            </div>
+            <div class="hero-days">
+              <div class="num">112 days left</div>
+              <div class="lbl">Renews 24 Dec 2026</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-head px"><h2>What's included</h2></div>
+        <div class="card" style="margin:0 22px; padding:14px 16px;">
+          <div class="ex-list">
+            <div class="ex-item"><span class="dot"></span>Unlimited access to all studios</div>
+            <div class="ex-item"><span class="dot"></span>All group classes included</div>
+            <div class="ex-item"><span class="dot"></span>Personalised workout &amp; BMI tracking</div>
+            <div class="ex-item"><span class="dot"></span>2 free personal training sessions / month</div>
+            <div class="ex-item"><span class="dot"></span>Priority booking for new classes</div>
+          </div>
+        </div>
+
+        <div class="section-head px" id="compare-plans"><h2>Compare plans</h2></div>
+        <div class="offer-scroll" style="padding-bottom:4px;">
+          <div class="offer-card o2" style="min-width:150px;">
+            <div class="offer-tag">Basic</div>
+            <h4 style="font-size:17px; margin-top:8px;">₹1,999<span style="font-size:11px; color:var(--text-dim);">/mo</span></h4>
+            <p>Single studio access, no classes included.</p>
+          </div>
+          <div class="offer-card o1" style="min-width:150px; border-color:rgba(239,27,35,0.4);">
+            <div class="offer-tag">Pro</div>
+            <h4 style="font-size:17px; margin-top:8px;">₹2,999<span style="font-size:11px; color:var(--text-dim);">/mo</span></h4>
+            <p>All studios + group classes included.</p>
+          </div>
+          <div class="offer-card o3" style="min-width:150px;">
+            <div class="offer-tag">Elite Black</div>
+            <h4 style="font-size:17px; margin-top:8px;">₹4,999<span style="font-size:11px; color:var(--text-dim);">/mo</span></h4>
+            <p>Everything + personal training sessions.</p>
+          </div>
+        </div>
+
+        <div class="px" style="margin-top:18px; display:flex; flex-direction:column; gap:10px;">
+          <button class="btn-primary" onclick="renewNow()">Renew now</button>
+          <button class="btn-ghost" onclick="changePlan()">Change plan</button>
+          <div class="share-row" style="margin-top:0;">
+            <button class="share-btn whatsapp-btn" onclick="contactWhatsApp('cancel')">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M17.47 14.38c-.29-.15-1.7-.84-1.97-.93-.26-.1-.46-.15-.65.15-.2.29-.75.93-.92 1.12-.17.2-.34.22-.63.08-.29-.15-1.22-.45-2.33-1.44-.86-.77-1.44-1.72-1.61-2.01-.17-.29-.02-.45.13-.6.13-.13.29-.34.44-.51.15-.17.2-.29.29-.49.1-.2.05-.37-.02-.51-.08-.15-.65-1.58-.9-2.16-.24-.58-.48-.5-.65-.51h-.56c-.2 0-.51.07-.78.37-.26.29-1.02 1-1.02 2.44s1.04 2.83 1.19 3.03c.15.2 2.05 3.13 4.96 4.39.69.3 1.23.48 1.65.61.69.22 1.32.19 1.82.11.55-.08 1.7-.7 1.94-1.37.24-.68.24-1.25.17-1.37-.07-.12-.26-.19-.55-.34Z"/><path d="M12.02 2C6.5 2 2 6.48 2 11.98c0 1.87.51 3.63 1.4 5.13L2 22l5.02-1.32a10 10 0 0 0 5 1.28h.01c5.51 0 10-4.48 10-9.98S17.53 2 12.02 2Zm0 18.18c-1.61 0-3.19-.43-4.56-1.25l-.33-.19-3.35.88.9-3.26-.21-.34a8.17 8.17 0 0 1-1.26-4.36c0-4.52 3.69-8.2 8.22-8.2 2.2 0 4.26.86 5.82 2.41a8.13 8.13 0 0 1 2.4 5.8c0 4.52-3.69 8.2-8.22 8.2Z"/></svg>
+              Cancel
+            </button>
+            <button class="share-btn whatsapp-btn" onclick="contactWhatsApp('upgrade')">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M17.47 14.38c-.29-.15-1.7-.84-1.97-.93-.26-.1-.46-.15-.65.15-.2.29-.75.93-.92 1.12-.17.2-.34.22-.63.08-.29-.15-1.22-.45-2.33-1.44-.86-.77-1.44-1.72-1.61-2.01-.17-.29-.02-.45.13-.6.13-.13.29-.34.44-.51.15-.17.2-.29.29-.49.1-.2.05-.37-.02-.51-.08-.15-.65-1.58-.9-2.16-.24-.58-.48-.5-.65-.51h-.56c-.2 0-.51.07-.78.37-.26.29-1.02 1-1.02 2.44s1.04 2.83 1.19 3.03c.15.2 2.05 3.13 4.96 4.39.69.3 1.23.48 1.65.61.69.22 1.32.19 1.82.11.55-.08 1.7-.7 1.94-1.37.24-.68.24-1.25.17-1.37-.07-.12-.26-.19-.55-.34Z"/><path d="M12.02 2C6.5 2 2 6.48 2 11.98c0 1.87.51 3.63 1.4 5.13L2 22l5.02-1.32a10 10 0 0 0 5 1.28h.01c5.51 0 10-4.48 10-9.98S17.53 2 12.02 2Zm0 18.18c-1.61 0-3.19-.43-4.56-1.25l-.33-.19-3.35.88.9-3.26-.21-.34a8.17 8.17 0 0 1-1.26-4.36c0-4.52 3.69-8.2 8.22-8.2 2.2 0 4.26.86 5.82 2.41a8.13 8.13 0 0 1 2.4 5.8c0 4.52-3.69 8.2-8.22 8.2Z"/></svg>
+              Upgrade
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ REFERRAL (sub-screen) ============ -->
+      <div class="screen" id="screen-referral">
+        <div class="back-row">
+          <div class="icon-btn" onclick="showScreen('home')" aria-label="Go back"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+          <h1 style="font-size:19px;">Refer &amp; Earn</h1>
+        </div>
+
+        <div class="code-box">
+          <div class="eyebrow">Your referral code</div>
+          <div class="code">MXARJ482</div>
+          <div class="bmi-note">Share this code — your friend gets ₹500 off, you earn credit when they join.</div>
+          <div class="share-row">
+            <button class="share-btn" onclick="copyCode()">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy code
+            </button>
+            <button class="share-btn whatsapp-btn" onclick="shareOnWhatsApp()">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M17.47 14.38c-.29-.15-1.7-.84-1.97-.93-.26-.1-.46-.15-.65.15-.2.29-.75.93-.92 1.12-.17.2-.34.22-.63.08-.29-.15-1.22-.45-2.33-1.44-.86-.77-1.44-1.72-1.61-2.01-.17-.29-.02-.45.13-.6.13-.13.29-.34.44-.51.15-.17.2-.29.29-.49.1-.2.05-.37-.02-.51-.08-.15-.65-1.58-.9-2.16-.24-.58-.48-.5-.65-.51h-.56c-.2 0-.51.07-.78.37-.26.29-1.02 1-1.02 2.44s1.04 2.83 1.19 3.03c.15.2 2.05 3.13 4.96 4.39.69.3 1.23.48 1.65.61.69.22 1.32.19 1.82.11.55-.08 1.7-.7 1.94-1.37.24-.68.24-1.25.17-1.37-.07-.12-.26-.19-.55-.34Z"/><path d="M12.02 2C6.5 2 2 6.48 2 11.98c0 1.87.51 3.63 1.4 5.13L2 22l5.02-1.32a10 10 0 0 0 5 1.28h.01c5.51 0 10-4.48 10-9.98S17.53 2 12.02 2Zm0 18.18c-1.61 0-3.19-.43-4.56-1.25l-.33-.19-3.35.88.9-3.26-.21-.34a8.17 8.17 0 0 1-1.26-4.36c0-4.52 3.69-8.2 8.22-8.2 2.2 0 4.26.86 5.82 2.41a8.13 8.13 0 0 1 2.4 5.8c0 4.52-3.69 8.2-8.22 8.2Z"/></svg>
+              WhatsApp
+            </button>
+          </div>
+        </div>
+
+        <div class="ref-stats">
+          <div class="ref-stat"><div class="n">6</div><div class="l">INVITED</div></div>
+          <div class="ref-stat"><div class="n">3</div><div class="l">JOINED</div></div>
+          <div class="ref-stat"><div class="n">₹1,700</div><div class="l">EARNED</div></div>
+        </div>
+
+        <div class="section-head px"><h2>Reward tiers</h2></div>
+        <div class="tier-row"><div class="t">1 friend joins</div><div class="r">₹200 credit</div></div>
+        <div class="tier-row"><div class="t">3 friends join</div><div class="r">1 month free</div></div>
+        <div class="tier-row"><div class="t">5 friends join</div><div class="r">Free Elite upgrade</div></div>
+      </div>
+
+    </div>
+
+    <!-- Bottom nav -->
+    <div class="navbar">
+      <button class="navbtn active" data-nav="home" onclick="showScreen('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>
+        Home
+      </button>
+      <button class="navbtn" data-nav="plans" onclick="showScreen('plans')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 4l3 3M20 20l-3-3M9 9l6 6"/></svg>
+        Plans
+      </button>
+      <button class="navbtn" data-nav="classes" onclick="showScreen('classes')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        Classes
+      </button>
+      <button class="navbtn" data-nav="wallet" onclick="showScreen('wallet')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2.5"/><path d="M2.5 10h19"/><path d="M15.5 14.5h3"/></svg>
+        Wallet
+      </button>
+      <button class="navbtn" data-nav="profile" onclick="showScreen('profile')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        Profile
+      </button>
+    </div>
+
+    <div class="toast" id="toast">Copied to clipboard</div>
+  </div>
+
+<script>
+  const MAIN_TABS = ['home','plans','classes','wallet','profile'];
+  const MODAL_SCREENS = ['membership','referral'];
+  let currentScreen = 'home';
+
+  function showScreen(id){
+    const target = document.getElementById('screen-'+id);
+    if(!target) return;
+
+    let animClass = 'enter-fade';
+    if(MODAL_SCREENS.includes(id)){
+      animClass = 'enter-modal';
+    } else if(MODAL_SCREENS.includes(currentScreen) && MAIN_TABS.includes(id)){
+      animClass = 'enter-modal-back';
+    } else if(MAIN_TABS.includes(id) && MAIN_TABS.includes(currentScreen)){
+      const newIdx = MAIN_TABS.indexOf(id);
+      const oldIdx = MAIN_TABS.indexOf(currentScreen);
+      animClass = newIdx > oldIdx ? 'enter-right' : (newIdx < oldIdx ? 'enter-left' : 'enter-fade');
+    }
+
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active','enter-right','enter-left','enter-fade','enter-modal','enter-modal-back'));
+    target.classList.add('active', animClass);
+    target.scrollTop = 0;
+    currentScreen = id;
+
+    document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+    const navId = MAIN_TABS.includes(id) ? id : (id==='membership' ? 'profile' : id==='referral' ? 'profile' : 'home');
+    const navBtn = document.querySelector('.navbtn[data-nav="'+navId+'"]');
+    if(navBtn) navBtn.classList.add('active');
+  }
+
+  /* ---------- Keyboard accessibility for clickable divs ---------- */
+  document.querySelectorAll('[onclick]').forEach(el=>{
+    if(!['BUTTON','A','INPUT'].includes(el.tagName)){
+      if(!el.hasAttribute('role')) el.setAttribute('role','button');
+      if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','0');
+      el.addEventListener('keydown', e=>{
+        if(e.key==='Enter' || e.key===' '){ e.preventDefault(); el.click(); }
+      });
+    }
+  });
+
+  /* ---------- BMI ---------- */
+  function calcBMI(){
+    const h = parseFloat(document.getElementById('in-height').value);
+    const w = parseFloat(document.getElementById('in-weight').value);
+    const resultBox = document.getElementById('bmi-result');
+    if(!h || !w || h<=0 || w<=0){
+      showToast('Enter height and weight');
+      return;
+    }
+    const bmi = w / Math.pow(h/100, 2);
+    const bmiRounded = bmi.toFixed(1);
+    document.getElementById('bmi-num').textContent = bmiRounded;
+
+    let cat, catClass, note, suggestedGoal;
+    if(bmi < 18.5){
+      cat='Underweight'; catClass='cat-under'; suggestedGoal='gain';
+      note='You may benefit from a calorie surplus. We suggest the Weight Gain plan.';
+    } else if(bmi < 25){
+      cat='Normal'; catClass='cat-normal'; suggestedGoal='maintain';
+      note='You are in a healthy range. The Maintain / Tone plan will help you stay there.';
+    } else if(bmi < 30){
+      cat='Overweight'; catClass='cat-over'; suggestedGoal='loss';
+      note='A calorie deficit plan can help. We suggest the Weight Loss plan.';
+    } else {
+      cat='Obese'; catClass='cat-obese'; suggestedGoal='loss';
+      note='A structured Weight Loss plan with cardio is recommended — talk to a trainer too.';
+    }
+    const catEl = document.getElementById('bmi-cat');
+    catEl.textContent = cat;
+    catEl.className = 'cat '+catClass;
+    document.getElementById('bmi-note').textContent = note;
+    resultBox.style.display = 'flex';
+    resultBox.classList.remove('pop');
+    void resultBox.offsetWidth;
+    resultBox.classList.add('pop');
+    selectGoal(suggestedGoal);
+    showToast('Suggested goal updated below');
+  }
+
+  /* ---------- Workout plans ---------- */
+  const PLAN_DATA = {
+    loss:{
+      cal:'1,800 kcal', focus:'Fat loss + cardio',
+      days:[
+        {day:'Monday', focus:'Full body + cardio', dur:'50 min', items:['Treadmill incline walk – 15 min','Goblet squats – 3x15','Push-ups – 3x12','Plank – 3x40s']},
+        {day:'Tuesday', focus:'HIIT circuit', dur:'35 min', items:['Jump rope – 5 rounds','Burpees – 3x12','Mountain climbers – 3x30s']},
+        {day:'Wednesday', focus:'Active recovery', dur:'30 min', items:['Brisk walk – 25 min','Stretching + foam rolling']},
+        {day:'Thursday', focus:'Lower body + cardio', dur:'50 min', items:['Cycling – 15 min','Lunges – 3x12/side','Glute bridges – 3x15']},
+        {day:'Friday', focus:'Upper body + core', dur:'45 min', items:['Dumbbell rows – 3x12','Shoulder press – 3x12','Hanging knee raise – 3x12']},
+        {day:'Saturday', focus:'HIIT + core', dur:'40 min', items:['Rowing machine – 15 min','Russian twists – 3x20','Bicycle crunch – 3x20']},
+        {day:'Sunday', focus:'Rest', dur:'—', items:['Light stretching','Hydration + sleep focus']},
+      ]
+    },
+    gain:{
+      cal:'3,100 kcal', focus:'Calorie surplus + strength',
+      days:[
+        {day:'Monday', focus:'Chest &amp; triceps', dur:'55 min', items:['Bench press – 4x8','Incline dumbbell press – 3x10','Tricep dips – 3x12']},
+        {day:'Tuesday', focus:'Back &amp; biceps', dur:'55 min', items:['Deadlift – 4x6','Lat pulldown – 3x10','Barbell curls – 3x12']},
+        {day:'Wednesday', focus:'Legs', dur:'55 min', items:['Back squat – 4x8','Leg press – 3x12','Calf raises – 4x15']},
+        {day:'Thursday', focus:'Shoulders', dur:'45 min', items:['Overhead press – 4x8','Lateral raises – 3x15','Face pulls – 3x15']},
+        {day:'Friday', focus:'Full body strength', dur:'50 min', items:['Squat – 3x10','Bench press – 3x10','Rows – 3x10']},
+        {day:'Saturday', focus:'Arms &amp; core', dur:'40 min', items:['Superset curls/tricep pushdown – 3x12','Weighted plank – 3x40s']},
+        {day:'Sunday', focus:'Rest', dur:'—', items:['High protein intake','8+ hours sleep']},
+      ]
+    },
+    muscle:{
+      cal:'2,700 kcal', focus:'Hypertrophy + progressive overload',
+      days:[
+        {day:'Monday', focus:'Push', dur:'55 min', items:['Bench press – 4x8','Incline press – 3x10','Lateral raise – 3x15']},
+        {day:'Tuesday', focus:'Pull', dur:'55 min', items:['Pull-ups – 4x8','Barbell row – 3x10','Face pulls – 3x15']},
+        {day:'Wednesday', focus:'Legs', dur:'55 min', items:['Squat – 4x8','Romanian deadlift – 3x10','Leg curl – 3x12']},
+        {day:'Thursday', focus:'Push (volume)', dur:'50 min', items:['Overhead press – 4x8','Dips – 3x10','Cable fly – 3x12']},
+        {day:'Friday', focus:'Pull (volume)', dur:'50 min', items:['Deadlift – 3x6','Lat pulldown – 3x10','Bicep curl – 3x12']},
+        {day:'Saturday', focus:'Legs + core', dur:'45 min', items:['Leg press – 4x10','Walking lunges – 3x12','Hanging leg raise – 3x12']},
+        {day:'Sunday', focus:'Rest', dur:'—', items:['Mobility work','Protein-focused meals']},
+      ]
+    },
+    maintain:{
+      cal:'2,200 kcal', focus:'Balanced fitness + toning',
+      days:[
+        {day:'Monday', focus:'Full body', dur:'45 min', items:['Squats – 3x12','Push-ups – 3x12','Rows – 3x12']},
+        {day:'Tuesday', focus:'Yoga / mobility', dur:'40 min', items:['Sun salutations','Hip openers','Core flow']},
+        {day:'Wednesday', focus:'Cardio', dur:'35 min', items:['Cycling – 25 min','Core circuit – 10 min']},
+        {day:'Thursday', focus:'Strength', dur:'45 min', items:['Deadlift – 3x10','Shoulder press – 3x10','Plank – 3x45s']},
+        {day:'Friday', focus:'Active recovery', dur:'30 min', items:['Swimming or walk','Stretching']},
+        {day:'Saturday', focus:'Functional training', dur:'40 min', items:['Kettlebell swings – 3x15','Battle ropes – 4x30s','Box step-ups – 3x12']},
+        {day:'Sunday', focus:'Rest', dur:'—', items:['Light stretching','Reflect on the week']},
+      ]
+    }
+  };
+
+  function selectGoal(goal){
+    document.querySelectorAll('.goal-chip').forEach(c=>c.classList.toggle('active', c.dataset.goal===goal));
+    const p = PLAN_DATA[goal];
+    document.getElementById('plan-cal').textContent = p.cal;
+    document.getElementById('plan-focus').textContent = p.focus;
+    const wrap = document.getElementById('plan-days');
+    wrap.innerHTML = p.days.map((d,i)=>`
+      <div class="day-card" style="animation-delay:${i*45}ms">
+        <div class="dhead">
+          <div>
+            <div class="dname">${d.day}</div>
+            <div class="dfocus">${d.focus}</div>
+          </div>
+          <div class="ddur">${d.dur}</div>
+        </div>
+        <div class="ex-list">
+          ${d.items.map(i=>`<div class="ex-item"><span class="dot"></span>${i}</div>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+  selectGoal('loss');
+
+  /* ---------- Classes ---------- */
+  function filterClasses(el, cat){
+    document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('#class-list .class-card').forEach(card=>{
+      card.style.display = (cat==='all' || card.dataset.cat===cat) ? 'flex' : 'none';
+    });
+  }
+  function bookClass(btn){
+    btn.textContent = 'Booked';
+    btn.classList.add('booked');
+    showToast('Class booked');
+  }
+
+  /* ---------- Wallet ---------- */
+  function toggleRenew(){
+    const on = document.getElementById('renew-toggle').checked;
+    document.getElementById('renew-sub').textContent = on
+      ? "Your Elite Black plan renews automatically so you never lose access."
+      : "Auto-renewal is off. Renew manually before 24 Dec 2026 to avoid losing access.";
+    showToast(on ? 'Auto-renewal turned on' : 'Auto-renewal turned off');
+  }
+
+  function fmtDate(d){
+    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return String(d.getDate()).padStart(2,'0')+' '+months[d.getMonth()]+' '+d.getFullYear();
+  }
+
+  function addPaymentMethod(){
+    showToast('Add payment method opened');
+  }
+
+  function payNow(){
+    const btn = document.getElementById('pay-btn');
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Processing…';
+    setTimeout(()=>{
+      const list = document.getElementById('txn-list');
+      const row = document.createElement('div');
+      row.className = 'txn pop-in';
+      row.innerHTML = `
+        <div class="l"><div class="t">Elite Black — Manual payment</div><div class="d">${fmtDate(new Date())}</div></div>
+        <div class="r"><div class="amt">₹4,999</div><div class="status-pill status-paid">PAID</div></div>
+      `;
+      list.prepend(row);
+      btn.disabled = false;
+      btn.textContent = original;
+      showToast('Payment successful');
+    }, 850);
+  }
+
+  /* ---------- Membership ---------- */
+  function renewNow(){
+    showToast('Processing renewal…');
+    setTimeout(()=> showToast('Membership renewed successfully'), 800);
+  }
+  function changePlan(){
+    document.getElementById('compare-plans').scrollIntoView({behavior:'smooth', block:'start'});
+    showToast('Pick a plan below');
+  }
+
+  /* ---------- Profile ---------- */
+  function logOut(){
+    showToast('Logging out…');
+    setTimeout(()=>{
+      showScreen('home');
+      showToast('Logged out successfully');
+    }, 700);
+  }
+
+  /* ---------- Referral ---------- */
+  function copyCode(){
+    const code = 'MXARJ482';
+    if(navigator.clipboard){ navigator.clipboard.writeText(code).catch(()=>{}); }
+    showToast('Code copied — MXARJ482');
+  }
+  function shareOnWhatsApp(){
+    const code = 'MXARJ482';
+    const message = `Join MuscleXFitness with my referral code ${code} and get ₹500 off your first month! 💪`;
+    const url = 'https://wa.me/?text=' + encodeURIComponent(message);
+    window.open(url, '_blank');
+    showToast('Opening WhatsApp…');
+  }
+
+  /* ---------- Membership support (cancel / upgrade via WhatsApp) ---------- */
+  function contactWhatsApp(intent){
+    const supportNumber = '918650214489'; // +91 86502 14489
+    const name = 'Arjun Mehta';
+    const plan = 'Elite Black';
+    const message = intent === 'cancel'
+      ? `Hi, I'm ${name} (${plan} member). I would like to CANCEL my MuscleXFitness membership. Please assist.`
+      : `Hi, I'm ${name} (${plan} member). I would like to UPGRADE my MuscleXFitness membership. Please share the available options.`;
+    const url = `https://wa.me/${supportNumber}?text=` + encodeURIComponent(message);
+    window.open(url, '_blank');
+    showToast('Opening WhatsApp…');
+  }
+
+  /* ---------- Toast ---------- */
+  let toastTimer;
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+  }
+</script>
+</body>
+</html>
